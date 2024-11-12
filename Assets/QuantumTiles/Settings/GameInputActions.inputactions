@@ -7,36 +7,80 @@
             "actions": [
                 {
                     "name": "SelectCard",
-                    "type": "Button",
+                    "type": "Value",
                     "id": "b42a83a6-0b4d-4106-9d55-4706bffcbdcd",
-                    "expectedControlType": "Button",
+                    "expectedControlType": "Vector2",
                     "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": false
+                    "interactions": "Press",
+                    "initialStateCheck": true
                 }
             ],
             "bindings": [
                 {
-                    "name": "",
-                    "id": "b9c0ccf6-8655-4a0d-96a3-200ca92e492b",
-                    "path": "<Mouse>/leftButton",
+                    "name": "Mouse",
+                    "id": "f75f33d2-f554-40ea-b492-7cd79ceaf4b6",
+                    "path": "OneModifier",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "SelectCard",
+                    "isComposite": true,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "modifier",
+                    "id": "8b06c45e-0a4d-4c3a-bf33-b94fc6d43e56",
+                    "path": "<Mouse>/press",
                     "interactions": "",
                     "processors": "",
                     "groups": "Keyboard&Mouse",
                     "action": "SelectCard",
                     "isComposite": false,
+                    "isPartOfComposite": true
+                },
+                {
+                    "name": "binding",
+                    "id": "b39f8da4-cbf9-46ec-9442-771fc9b0c75d",
+                    "path": "<Mouse>/position",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "SelectCard",
+                    "isComposite": false,
+                    "isPartOfComposite": true
+                },
+                {
+                    "name": "Touch",
+                    "id": "be9c7978-7040-43cf-a1a6-9ac5ac1bb82f",
+                    "path": "OneModifier",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "SelectCard",
+                    "isComposite": true,
                     "isPartOfComposite": false
                 },
                 {
-                    "name": "",
-                    "id": "1607cfbb-efff-484f-903c-a777c4b4ab5f",
+                    "name": "modifier",
+                    "id": "0c1260d5-f396-41a6-87ee-94110898284a",
                     "path": "<Touchscreen>/Press",
                     "interactions": "",
                     "processors": "",
                     "groups": "Touch",
                     "action": "SelectCard",
                     "isComposite": false,
-                    "isPartOfComposite": false
+                    "isPartOfComposite": true
+                },
+                {
+                    "name": "binding",
+                    "id": "fe6bc324-7c0e-497d-9bc2-0f7c7f53b5fa",
+                    "path": "<Touchscreen>/position",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Touch",
+                    "action": "SelectCard",
+                    "isComposite": false,
+                    "isPartOfComposite": true
                 }
             ]
         },
@@ -84,7 +128,7 @@
                     "name": "Click",
                     "type": "PassThrough",
                     "id": "3c7022bf-7922-4f7c-a998-c437916075ad",
-                    "expectedControlType": "Button",
+                    "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": true
