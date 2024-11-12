@@ -1,17 +1,19 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Events;
 
 public class GameManager : MonoBehaviour
 {
-    // List to track flipped cards
-    [Header("Flipped Debug")]
-    [SerializeField] private List<CardController> _flippedCards = new List<CardController>();
+
     [Header("Options")]
+
     [SerializeField] private float _canSelectDelay = 2.0f;
     [SerializeField] private float _memorizeDelay = 3.0f;
 
+    private List<CardController> _flippedCards = new List<CardController>();
     private GameStats _stats;
 
     // Total number of matched pairs to win the game
@@ -27,6 +29,7 @@ public class GameManager : MonoBehaviour
     public static UnityAction OnMatch;
     public static UnityAction OnMismatch;
     public static UnityAction OnGameOver;
+    public static UnityAction<GameStats> OnGameLoad;
     public static UnityAction<GameStats> OnStatsUpdate;
 
 
@@ -71,7 +74,7 @@ public class GameManager : MonoBehaviour
     {
         yield return new WaitForSeconds(_memorizeDelay); // Wait before checking
 
-        _stats._attemptsCount++;
+        _stats.attempts++;
         CardController firstCard = _flippedCards[0];
         CardController secondCard = _flippedCards[1];
 
@@ -111,7 +114,7 @@ public class GameManager : MonoBehaviour
 
     private void MismatchedCards()
     {
-        _stats._comboCount = 0;
+        _stats.combo = 0;
 
         foreach (CardController card in _flippedCards)
         {
@@ -124,8 +127,8 @@ public class GameManager : MonoBehaviour
 
     private void IncreaseScore()
     {
-        _stats._comboCount++;
-        _stats._score += 10 * _stats._comboCount; // Increase score based on combo multiplier
+        _stats.combo++;
+        _stats.score += 10 * _stats.combo; // Increase score based on combo multiplier
     }
 
     private void GameOver()
@@ -141,5 +144,71 @@ public class GameManager : MonoBehaviour
     public bool CanSelectCard()
     {
         return _canSelectCard;
+    }
+
+    public void SaveGame()
+    {
+       StartCoroutine(SaveRoutine());
+    }
+
+    private IEnumerator SaveRoutine()
+    {
+        
+         yield return new WaitForSeconds(.5f);
+
+        GameStats gameState = new GameStats
+        {
+            score = _stats.score,
+            attempts = _stats.attempts,
+            combo = _stats.combo,
+            cards = new List<CardData>(),
+            matchesRequired = _totalMatchesRequired,
+            currentMatches = _currentMatches
+        };
+
+        // Gather data for each card
+        foreach (var card in FindObjectsOfType<CardController>())
+        {
+            CardData cardData = new CardData
+            {
+                cardID = card.CardID,
+                isFlipped = card.IsFlipped(),
+                isMatched = card.IsMatched(),
+                position = card.transform.position,
+                scale = card.transform.localScale
+            };
+            gameState.cards.Add(cardData);
+        }
+
+        string json = JsonUtility.ToJson(gameState);
+        File.WriteAllText(Application.persistentDataPath + "/gameState.json", json);
+        Debug.Log("Game saved.");
+    }
+
+    public void LoadGame()
+    {
+        StopAllCoroutines();
+        _flippedCards.Clear();
+        string path = Application.persistentDataPath + "/gameState.json";
+        if (File.Exists(path))
+        {
+            string json = File.ReadAllText(path);
+            GameStats gameStat = JsonUtility.FromJson<GameStats>(json);
+
+            // Restore game data
+            _stats.score = gameStat.score;
+            _stats.attempts = gameStat.attempts;
+            _stats.combo = gameStat.combo;
+            _totalMatchesRequired = gameStat.matchesRequired;
+            _currentMatches = gameStat.currentMatches;
+
+            OnGameLoad?.Invoke(gameStat);
+            Debug.Log("Game loaded.");
+            OnStatsUpdate?.Invoke(gameStat);
+        }
+        else
+        {
+            Debug.Log("No saved game found.");
+        }
     }
 }

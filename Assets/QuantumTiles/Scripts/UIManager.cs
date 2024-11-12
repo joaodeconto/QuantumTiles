@@ -21,6 +21,8 @@ public class UIManager : MonoBehaviour
     [SerializeField] private Button highScoreButton;
     [SerializeField] private Button optionsButton;
     [SerializeField] private Button restartButton;
+    [SerializeField] private Button saveButton;
+    [SerializeField] private Button loadButton;
 
     [Header("Panels")]
     [SerializeField] private GameObject initialMenuPanel;
@@ -29,7 +31,7 @@ public class UIManager : MonoBehaviour
     [SerializeField] private GameObject highScorePanel;
 
     public static UIManager Instance { get; private set; }
-    public Action<int, int> OnStartButtonClicked;
+    public Action<Vector2> OnStartButtonClicked;
 
     private void Awake()
     {
@@ -55,8 +57,7 @@ public class UIManager : MonoBehaviour
         GameManager.OnStatsUpdate -= UpdateScoreUI;
     }
 
-
-    public void InitializeSetupUI(Vector2 maxMinArray)
+    public void SetupUI(Vector2 maxMinArray)
     {
         rowsSlider.minValue = maxMinArray.x;
         rowsSlider.maxValue = maxMinArray.y;
@@ -72,11 +73,13 @@ public class UIManager : MonoBehaviour
         startGameplayButton.onClick.AddListener(() => StartGame());
         restartButton.onClick.AddListener(() => RestartGame());
 
+        saveButton.onClick.AddListener(() => GameManager.Instance.SaveGame());
+        loadButton.onClick.AddListener(() => GameManager.Instance.LoadGame());
     }
 
     private void StartGame()
     {
-        OnStartButtonClicked?.Invoke((int)rowsSlider.value, (int)columnsSlider.value);
+        OnStartButtonClicked?.Invoke(new Vector2(rowsSlider.value, columnsSlider.value));
         initialMenuPanel.SetActive(false);
     }
 
@@ -88,9 +91,9 @@ public class UIManager : MonoBehaviour
 
     public void UpdateScoreUI(GameStats stats)
     {
-        comboText.text = "Combo " + stats._comboCount;
-        attemptsText.text = "Attempts " + stats._attemptsCount;
-        scoreText.text = "Score: " + stats._score;
+        comboText.text = "Combo " + stats.combo;
+        attemptsText.text = "Attempts " + stats.attempts;
+        scoreText.text = "Score: " + stats.score;
     }
 
     public void ShowGameOverPanel()
@@ -98,10 +101,15 @@ public class UIManager : MonoBehaviour
         gameOverPanel.SetActive(true);
     }
 
+    public void HideGameOverPanel()
+    {
+        gameOverPanel.SetActive(false);
+    }
+
     public void ShowInitialMenu()
     {
         initialMenuPanel.SetActive(true);
-        gameOverPanel.SetActive(false);
+        HideGameOverPanel();
     }
 
     public void HideInitialMenu()
