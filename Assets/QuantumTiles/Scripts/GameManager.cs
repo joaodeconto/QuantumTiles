@@ -1,33 +1,47 @@
+using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 using TMPro;
+using UnityEngine;
+using UnityEngine.Events;
 
 public class GameManager : MonoBehaviour
 {
     // List to track flipped cards
+    [Header("Flipped Debug")]
     [SerializeField] private List<CardController> _flippedCards = new List<CardController>();
+    [Header("Options")]
+    [SerializeField] private float _canSelectDelay = 2.0f;
+    [SerializeField] private float _memorizeDelay = 3.0f;
 
-    // Scoring
-    private int _score = 0;
-    private int _comboCount = 0;
-    private int _attemptsCount = 0;
-
-    // UI references (score display, game over panel, etc.)
-    [SerializeField] private TMP_Text _scoreText;
-    [SerializeField] private TMP_Text _comboText;
-    [SerializeField] private TMP_Text _attemptsText;
-    [SerializeField] private GameObject _gameOverPanel;
-    //[SerializeField] GameObject _board;
-
+    private GameStats _stats = new GameStats();
 
     // Total number of matched pairs to win the game
     private int _totalMatchesRequired;
     private int _currentMatches;
 
+    // Lock for card selection
+    private bool _canSelectCard = true;
+
+    public static GameManager Instance;
+
+    public static UnityAction OnFlip;
+    public static UnityAction OnMatch;
+    public static UnityAction OnMismatch;
+    public static UnityAction OnGameOver;
+    public static UnityAction<GameStats> OnStatsUpdate;
+
+    public int TotalMatches
+    {
+        get { return _totalMatchesRequired; }
+        set { _totalMatchesRequired = value; }
+    }
+
+    private void Awake()
+    {
+        Instance = this;
+    }
     private void Start()
     {
-        // Calculate the number of pairs based on total cards in the scene
-        _totalMatchesRequired = GameObject.FindGameObjectsWithTag("Card").Length / 2;
         UpdateUI();
     }
 
@@ -43,77 +57,92 @@ public class GameManager : MonoBehaviour
 
     private void HandleCardFlip(CardController card)
     {
+
+        OnFlip?.Invoke();
+
         // Add the flipped card to the list
         _flippedCards.Add(card);
-
-        // Check if we have two cards flipped
         if (_flippedCards.Count == 2)
         {
-            CheckForMatch();
+            // Disable further card flipping
+            _canSelectCard = false;
+            StartCoroutine(CheckForMatchCoroutine());
         }
     }
 
-    private void CheckForMatch()
+    private IEnumerator CheckForMatchCoroutine()
     {
-        _attemptsCount++;
-        // Get the two flipped cards
+        yield return new WaitForSeconds(_memorizeDelay); // Wait before checking
+
+        _stats._attemptsCount++;
         CardController firstCard = _flippedCards[0];
         CardController secondCard = _flippedCards[1];
 
-        // Check if their IDs match
         if (firstCard.CardID == secondCard.CardID)
         {
-            // Cards match
+            Debug.Log("Got Match " + firstCard.CardID);
             firstCard.MatchCard();
             secondCard.MatchCard();
-            IncreaseScore();
-            _currentMatches++;
-            Debug.Log("Got Match " + firstCard.CardID);
-            // Check for game completion
-            if (_currentMatches == _totalMatchesRequired)
-            {
-                GameOver();
-            }
+            MatchedCards();
         }
         else
         {
-            Debug.Log("No Match " + firstCard.CardID + " ! " + secondCard.CardID );
-            // Cards don't match; reset combo and flip them back
-            _comboCount = 0;
-            Invoke(nameof(ResetCards), 1.0f); // Wait a second before flipping back
-            return;
+            Debug.Log("No Match " + firstCard.CardID + " ! " + secondCard.CardID);
+            MismatchedCards();
         }
 
-        // Clear the flippedCards list for the next attempt
-        _flippedCards.Clear();
+        // Delay
+        yield return new WaitForSeconds(_canSelectDelay);
+        // Re-enable card selection
+        _canSelectCard = true;
         UpdateUI();
     }
 
-    private void ResetCards()
+    private void MatchedCards()
     {
+        IncreaseScore();
+        _currentMatches++;
+        OnMatch?.Invoke();
+        //AudioManager.Instance.PlayMatchSound();
+        _flippedCards.Clear();
+
+        if (_currentMatches == _totalMatchesRequired)
+        {
+            GameOver();
+        }
+    }
+
+    private void MismatchedCards()
+    {
+        _stats._comboCount = 0;
+
         foreach (CardController card in _flippedCards)
         {
             card.UnflipCard();
         }
+        OnMismatch?.Invoke();
+        //AudioManager.Instance.PlayMismatchSound();
         _flippedCards.Clear();
-        UpdateUI();
     }
 
     private void IncreaseScore()
     {
-        _comboCount++;
-        _score += 10 * _comboCount; // Increase score based on combo multiplier
+        _stats._comboCount++;
+        _stats._score += 10 * _stats._comboCount; // Increase score based on combo multiplier
     }
 
     private void GameOver()
     {
-        _gameOverPanel.SetActive(true);
+        OnGameOver?.Invoke();
     }
 
     private void UpdateUI()
     {
-        _comboText.text = "Combo " + _comboCount;
-        _attemptsText.text = "Attempts " + _attemptsCount;
-        _scoreText.text = "Score: " + _score;
+        OnStatsUpdate?.Invoke(_stats);
+    }
+
+    public bool CanSelectCard()
+    {
+        return _canSelectCard;
     }
 }

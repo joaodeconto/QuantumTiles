@@ -1,8 +1,9 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 
 public class CardController : MonoBehaviour
-{    
+{
     [SerializeField] private Animator animator;
     [SerializeField] private bool isFlipped = false;
     [SerializeField] private bool isMatched = false;
@@ -12,26 +13,25 @@ public class CardController : MonoBehaviour
     // Unique identifier or matching value for each card
     private int _cardID;
 
-    public delegate void CardFlipped(CardController card);
-    public static event CardFlipped OnCardFlipped;
+    public static UnityAction<CardController> OnCardFlipped;
 
-    public int CardID 
-    { 
-        get 
-        { 
-            return _cardID; 
-        } 
+    public int CardID
+    {
+        get
+        {
+            return _cardID;
+        }
 
-        set 
-        {  
-            _cardID = value; 
-            SetCardVisual(); 
-        } 
+        set
+        {
+            _cardID = value;
+            SetCardVisual();
+        }
     }
 
     private void Awake()
     {
-        if(animator == null)
+        if (animator == null)
             animator = GetComponentInChildren<Animator>();
     }
 

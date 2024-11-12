@@ -4,19 +4,21 @@ using UnityEngine;
 public class BoardLayoutManager : MonoBehaviour
 {
     [Header("Grid Settings")]
-    public int rows = 2;
-    public int columns = 2;
-    public float spacing = 0.1f;
+    [SerializeField] private int _rows = 2;
+    [SerializeField] private int _columns = 2;
+    [SerializeField] private float _spacing = 0.1f;
 
     [Header("Card Settings")]
-    public GameObject cardPrefab;
-    public Transform cardContainer; // Reference to the container holding the cards
-    public List<int> cardIDs; // List of unique card IDs to match
+    [SerializeField] private GameObject cardPrefab;
+    [SerializeField] private Transform cardContainer; // Reference to the container holding the cards
 
     private List<GameObject> spawnedCards = new List<GameObject>();
+    private int Slots { get { return (_rows * _columns) / 2; } }
 
     private void Start()
     {
+        // Set Total Matches at GameManager
+        GameManager.Instance.TotalMatches = Slots;
         ArrangeAndShuffleCards();
     }
 
@@ -36,9 +38,9 @@ public class BoardLayoutManager : MonoBehaviour
         Vector2 cardSize = CalculateCardSize();
 
         // Arrange cards in a grid and assign IDs
-        for (int i = 0; i < rows; i++)
+        for (int i = 0; i < _rows; i++)
         {
-            for (int j = 0; j < columns; j++)
+            for (int j = 0; j < _columns; j++)
             {
                 // Instantiate the card at the calculated position
                 Vector3 position = CalculateCardPosition(i, j, cardSize);
@@ -49,7 +51,7 @@ public class BoardLayoutManager : MonoBehaviour
 
                 // Set the card ID and store it
                 CardController cardController = card.GetComponent<CardController>();
-                cardController.CardID = shuffledCardIDs[i * columns + j];
+                cardController.CardID = shuffledCardIDs[i * _columns + j];
 
                 // Add card to the spawned cards list
                 spawnedCards.Add(card);
@@ -61,10 +63,11 @@ public class BoardLayoutManager : MonoBehaviour
     {
         // Duplicate each card ID to create pairs
         List<int> deck = new List<int>();
-        foreach (int id in cardIDs)
-        {
-            deck.Add(id);
-            deck.Add(id);
+
+        for (int i = 0; i < Slots; i++)
+        { 
+            deck.Add(i);
+            deck.Add(i);
         }
 
         // Shuffle the list of IDs
@@ -84,8 +87,8 @@ public class BoardLayoutManager : MonoBehaviour
         // Calculate the width and height based on the container's size
         float containerWidth = cardContainer.GetComponent<Transform>().localScale.x;
         float containerHeight = cardContainer.GetComponent<Transform>().localScale.z;
-        float cardWidth = (containerWidth - (columns - 1) * spacing) / columns;
-        float cardHeight = (containerHeight - (rows - 1) * spacing) / rows;
+        float cardWidth = (containerWidth - (_columns - 1) * _spacing) / _columns;
+        float cardHeight = (containerHeight - (_rows - 1) * _spacing) / _rows;
 
         return new Vector2(.1f, .1f);
     }
@@ -93,12 +96,12 @@ public class BoardLayoutManager : MonoBehaviour
     private Vector3 CalculateCardPosition(int row, int col, Vector2 cardSize)
     {
         // Calculate the starting position to center the grid
-        float startX = -((columns - 1) * (cardSize.x + spacing)) / 2;
-        float startY = ((rows - 1) * (cardSize.y + spacing)) / 2;
+        float startX = -((_columns - 1) * (cardSize.x + _spacing)) / 2;
+        float startY = ((_rows - 1) * (cardSize.y + _spacing)) / 2;
 
         // Calculate the exact position for each card
-        float posX = startX + col * (cardSize.x + spacing);
-        float posY = startY - row * (cardSize.y + spacing);
+        float posX = startX + col * (cardSize.x + _spacing);
+        float posY = startY - row * (cardSize.y + _spacing);
 
         return new Vector3(posX, 0, posY);
     }
