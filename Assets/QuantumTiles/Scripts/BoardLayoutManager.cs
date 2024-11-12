@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Data;
 using UnityEngine;
 
 public class BoardLayoutManager : MonoBehaviour
@@ -10,20 +11,29 @@ public class BoardLayoutManager : MonoBehaviour
 
     [Header("Card Settings")]
     [SerializeField] private GameObject cardPrefab;
-    [SerializeField] private Transform cardContainer; // Reference to the container holding the cards
+    [SerializeField] private Transform cardContainer;
+    [SerializeField] private Transform boardPlane;
 
     private List<GameObject> spawnedCards = new List<GameObject>();
-    private int Slots { get { return (_rows * _columns) / 2; } }
+    private int TotalSlots => _rows * _columns;
 
-    private void Start()
+
+    private void OnEnable()
     {
-        // Set Total Matches at GameManager
-        GameManager.Instance.TotalMatches = Slots;
-        ArrangeAndShuffleCards();
+        GameSetup.OnGameStart += ArrangeAndShuffleCards;
     }
 
-    public void ArrangeAndShuffleCards()
+    private void OnDisable()
     {
+        GameSetup.OnGameStart -= ArrangeAndShuffleCards;
+    }
+
+
+    public void ArrangeAndShuffleCards(int rows, int columns)
+    {
+        _rows = rows;
+        _columns = columns;
+        
         // Clear any existing cards
         foreach (GameObject card in spawnedCards)
         {
@@ -31,29 +41,31 @@ public class BoardLayoutManager : MonoBehaviour
         }
         spawnedCards.Clear();
 
+        GameManager.Instance.StartNewGame(TotalSlots / 2);
+
         // Generate a list of shuffled card IDs
         List<int> shuffledCardIDs = GenerateShuffledCardIDs();
 
-        // Calculate card size based on container and grid settings
-        Vector2 cardSize = CalculateCardSize();
+        Vector3 cardSize = CalculateCardSize();
 
         // Arrange cards in a grid and assign IDs
+        int index = 0;
         for (int i = 0; i < _rows; i++)
         {
             for (int j = 0; j < _columns; j++)
             {
-                // Instantiate the card at the calculated position
+                // Stop if we reach the number of shuffled IDs after adjustment
+                if (index >= shuffledCardIDs.Count) break;
+
                 Vector3 position = CalculateCardPosition(i, j, cardSize);
                 GameObject card = Instantiate(cardPrefab, position, Quaternion.identity, cardContainer);
 
-                // Set card size
-                card.transform.localScale = new Vector3(cardSize.x, 1, cardSize.y);
+                card.transform.localScale = cardSize * 0.1f;
 
-                // Set the card ID and store it
                 CardController cardController = card.GetComponent<CardController>();
-                cardController.CardID = shuffledCardIDs[i * _columns + j];
+                cardController.CardID = shuffledCardIDs[index];
+                index++;
 
-                // Add card to the spawned cards list
                 spawnedCards.Add(card);
             }
         }
@@ -61,11 +73,9 @@ public class BoardLayoutManager : MonoBehaviour
 
     private List<int> GenerateShuffledCardIDs()
     {
-        // Duplicate each card ID to create pairs
         List<int> deck = new List<int>();
-
-        for (int i = 0; i < Slots; i++)
-        { 
+        for (int i = 0; i < TotalSlots / 2; i++)
+        {
             deck.Add(i);
             deck.Add(i);
         }
@@ -82,27 +92,29 @@ public class BoardLayoutManager : MonoBehaviour
         return deck;
     }
 
-    private Vector2 CalculateCardSize()
+    private Vector3 CalculateCardSize()
     {
-        // Calculate the width and height based on the container's size
-        float containerWidth = cardContainer.GetComponent<Transform>().localScale.x;
-        float containerHeight = cardContainer.GetComponent<Transform>().localScale.z;
-        float cardWidth = (containerWidth - (_columns - 1) * _spacing) / _columns;
-        float cardHeight = (containerHeight - (_rows - 1) * _spacing) / _rows;
+        Renderer boardRenderer = boardPlane.GetComponent<Renderer>();
+        float boardWidth = boardRenderer.bounds.size.x;
+        float boardHeight = boardRenderer.bounds.size.z;
 
-        return new Vector2(.1f, .1f);
+        float cardWidth = (boardWidth - (_columns - 1) * _spacing) / _columns;
+        float cardHeight = (boardHeight - (_rows - 1) * _spacing) / _rows;
+
+        return new Vector3(cardWidth, 1, cardHeight);
     }
 
-    private Vector3 CalculateCardPosition(int row, int col, Vector2 cardSize)
+    private Vector3 CalculateCardPosition(int row, int col, Vector3 cardSize)
     {
-        // Calculate the starting position to center the grid
-        float startX = -((_columns - 1) * (cardSize.x + _spacing)) / 2;
-        float startY = ((_rows - 1) * (cardSize.y + _spacing)) / 2;
+        Renderer boardRenderer = boardPlane.GetComponent<Renderer>();
+        Vector3 boardCenter = boardRenderer.bounds.center;
 
-        // Calculate the exact position for each card
+        float startX = boardCenter.x - (boardRenderer.bounds.size.x / 2) + (cardSize.x / 2);
+        float startZ = boardCenter.z + (boardRenderer.bounds.size.z / 2) - (cardSize.z / 2);
+
         float posX = startX + col * (cardSize.x + _spacing);
-        float posY = startY - row * (cardSize.y + _spacing);
+        float posZ = startZ - row * (cardSize.z + _spacing);
 
-        return new Vector3(posX, 0, posY);
+        return new Vector3(posX, boardCenter.y, posZ);
     }
 }

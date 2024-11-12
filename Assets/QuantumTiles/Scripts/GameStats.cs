@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class GameStats : MonoBehaviour
+public class GameStats
 {
     public int _score = 0;
     public int _comboCount = 0;

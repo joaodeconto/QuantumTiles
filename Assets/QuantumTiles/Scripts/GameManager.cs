@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -13,7 +12,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private float _canSelectDelay = 2.0f;
     [SerializeField] private float _memorizeDelay = 3.0f;
 
-    private GameStats _stats = new GameStats();
+    private GameStats _stats;
 
     // Total number of matched pairs to win the game
     private int _totalMatchesRequired;
@@ -30,18 +29,16 @@ public class GameManager : MonoBehaviour
     public static UnityAction OnGameOver;
     public static UnityAction<GameStats> OnStatsUpdate;
 
-    public int TotalMatches
-    {
-        get { return _totalMatchesRequired; }
-        set { _totalMatchesRequired = value; }
-    }
 
     private void Awake()
     {
         Instance = this;
     }
-    private void Start()
+    public void StartNewGame(int slots)
     {
+        _totalMatchesRequired = slots;
+        _currentMatches = 0;
+        _stats = new GameStats();
         UpdateUI();
     }
 

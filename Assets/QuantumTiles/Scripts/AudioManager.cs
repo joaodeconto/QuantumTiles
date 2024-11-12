@@ -25,7 +25,7 @@ public class AudioManager : MonoBehaviour
         GameManager.OnMismatch += PlayMismatchSound;
         GameManager.OnFlip += PlayFlipSound;
 
-        PlayBGSound();
+        //PlayBGSound();
     }
 
     private void OnDisable()
