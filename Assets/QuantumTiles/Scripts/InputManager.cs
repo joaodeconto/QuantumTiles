@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.EventSystems;
 
 public class InputManager : MonoBehaviour
 {
@@ -25,8 +26,17 @@ public class InputManager : MonoBehaviour
 
     private void OnSelectCard(InputAction.CallbackContext context)
     {
+        // Use Invoke to delay the call to ProcessCardSelection slightly
+        Invoke(nameof(ProcessCardSelection), 0.01f);
+    }
+
+    private void ProcessCardSelection()
+    {
         // Check if card flipping is allowed in the GameManager
         if (!GameManager.Instance.CanSelectCard()) return;
+
+        // Check if the pointer is currently over any UI element
+        if (IsPointerOverUI()) return;
 
         // Raycast from the mouse position (or touch position)
         Vector2 screenPosition = Mouse.current.position.ReadValue();
@@ -42,5 +52,11 @@ public class InputManager : MonoBehaviour
                 card.FlipCard();
             }
         }
+    }
+
+    private bool IsPointerOverUI()
+    {
+        // Returns true if the pointer is over any UI element
+        return EventSystem.current.IsPointerOverGameObject();
     }
 }

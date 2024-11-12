@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 public class AudioManager : MonoBehaviour
 {
@@ -10,31 +11,37 @@ public class AudioManager : MonoBehaviour
     public AudioClip introSound;
 
     [Header("Audio Source")]
-    private AudioSource audioSource;
+    private AudioSource _audioSource;
+
+    private bool _active = true;
 
     private void Awake()
     {
         // Initialize the audio source component
-        audioSource = gameObject.GetComponent<AudioSource>();
+        _audioSource = gameObject.GetComponent<AudioSource>();
     }
 
-    private void Start()
+    private void OnEnable()
     {
+        UIManager.Instance.OnAudioToggle += ToggleAudio;
         GameManager.OnGameOver += PlayWinSound;
         GameManager.OnMatch += PlayMatchSound;
         GameManager.OnMismatch += PlayMismatchSound;
         GameManager.OnFlip += PlayFlipSound;
-
-        //PlayBGSound();
     }
 
-    private void OnDisable()
+    private void OnDestroy()
     {
+        UIManager.Instance.OnAudioToggle -= ToggleAudio;
         GameManager.OnGameOver -= PlayWinSound;
         GameManager.OnMatch -= PlayMatchSound;
         GameManager.OnMismatch -= PlayMismatchSound;
         GameManager.OnFlip -= PlayFlipSound;
+    }
 
+    private void ToggleAudio(bool toggle)
+    {
+        _active = toggle;
     }
 
     // Method to play the flip sound
@@ -70,9 +77,9 @@ public class AudioManager : MonoBehaviour
     // Private helper method to play a sound clip
     private void PlaySound(AudioClip clip)
     {
-        if (clip != null)
+        if (clip != null && _active)
         {
-            audioSource.PlayOneShot(clip);
+            _audioSource.PlayOneShot(clip);
         }
     }
 }

@@ -5,14 +5,14 @@ using UnityEngine;
 public class BoardLayoutManager : MonoBehaviour
 {
     private Vector2 _rowsColumns = new(2, 2);
-    private float _spacing = 0.1f;
+    private readonly float _spacing = 0.1f;
 
     [Header("Card Settings")]
-    [SerializeField] private GameObject cardPrefab;
-    [SerializeField] private Transform cardContainer;
-    [SerializeField] private Transform boardPlane;
+    [SerializeField] private GameObject _cardPrefab;
+    [SerializeField] private Transform _cardContainer;
+    [SerializeField] private Transform _boardPlane;
 
-    private List<GameObject> spawnedCards = new List<GameObject>();
+    private readonly List<GameObject> _spawnedCards = new();
     private int TotalSlots => (int)(_rowsColumns.x * (int)_rowsColumns.y);
 
 
@@ -22,18 +22,19 @@ public class BoardLayoutManager : MonoBehaviour
         GameManager.OnGameLoad += RearangeCards;
     }
 
-    private void OnDisable()
+    private void OnDestroy()
     {
         GameSetup.OnGameStart -= ArrangeAndShuffleCards;
+        GameManager.OnGameLoad -= RearangeCards;
     }
 
     public void ClearDeck()
     {
-        foreach (GameObject card in spawnedCards)
+        foreach (GameObject card in _spawnedCards)
         {
             Destroy(card);
         }
-        spawnedCards.Clear();
+        _spawnedCards.Clear();
     }
 
     public void ArrangeAndShuffleCards(Vector2 rowsColumns)
@@ -59,7 +60,7 @@ public class BoardLayoutManager : MonoBehaviour
                 if (index >= shuffledCardIDs.Count) break;
 
                 Vector3 position = CalculateCardPosition(i, j, cardSize);
-                GameObject card = Instantiate(cardPrefab, position, Quaternion.identity, cardContainer);
+                GameObject card = Instantiate(_cardPrefab, position, Quaternion.identity, _cardContainer);
 
                 card.transform.localScale = cardSize * 0.1f;
 
@@ -67,7 +68,7 @@ public class BoardLayoutManager : MonoBehaviour
                 cardController.CardID = shuffledCardIDs[index];
                 index++;
 
-                spawnedCards.Add(card);
+                _spawnedCards.Add(card);
             }
         }
     }
@@ -95,7 +96,7 @@ public class BoardLayoutManager : MonoBehaviour
 
     private Vector3 CalculateCardSize()
     {
-        Renderer boardRenderer = boardPlane.GetComponent<Renderer>();
+        Renderer boardRenderer = _boardPlane.GetComponent<Renderer>();
         float boardWidth = boardRenderer.bounds.size.x;
         float boardHeight = boardRenderer.bounds.size.z;
 
@@ -107,7 +108,7 @@ public class BoardLayoutManager : MonoBehaviour
 
     private Vector3 CalculateCardPosition(int row, int col, Vector3 cardSize)
     {
-        Renderer boardRenderer = boardPlane.GetComponent<Renderer>();
+        Renderer boardRenderer = _boardPlane.GetComponent<Renderer>();
         Vector3 boardCenter = boardRenderer.bounds.center;
 
         float startX = boardCenter.x - (boardRenderer.bounds.size.x / 2) + (cardSize.x / 2);
@@ -119,26 +120,26 @@ public class BoardLayoutManager : MonoBehaviour
         return new Vector3(posX, boardCenter.y, posZ);
     }
 
-    private void RearangeCards(GameStats newStats)
+    private void RearangeCards(GameState newStats)
     {
         ClearDeck();
 
         // Restore each card
-        foreach (CardData cardData in newStats.cards)
+        foreach (CardData cardData in newStats.Cards)
         {
-            CardController card = InstantiateCardAtPosition(cardData.position);
-            card.transform.localScale = cardData.scale;
-            card.CardID = cardData.cardID;
-            if (cardData.isFlipped) card.FlipCard();
-            if (cardData.isMatched) card.MatchCard();
+            CardController card = InstantiateCardAtPosition(cardData.Position);
+            card.transform.localScale = cardData.Scale;
+            card.CardID = cardData.ID;
+            if (cardData.IsFlipped) card.FlipCard();
+            if (cardData.IsMatched) card.MatchCard();
         }
 
     }
 
     private CardController InstantiateCardAtPosition(Vector3 position)
     {
-        GameObject cardObj = Instantiate(cardPrefab, position, Quaternion.identity, cardContainer);
-        spawnedCards.Add(cardObj);
+        GameObject cardObj = Instantiate(_cardPrefab, position, Quaternion.identity, _cardContainer);
+        _spawnedCards.Add(cardObj);
         return cardObj.GetComponent<CardController>();
     }
 }

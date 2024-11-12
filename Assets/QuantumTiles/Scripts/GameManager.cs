@@ -14,7 +14,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private float _memorizeDelay = 3.0f;
 
     private List<CardController> _flippedCards = new List<CardController>();
-    private GameStats _stats;
+    private GameState _gameState = new GameState();
 
     // Total number of matched pairs to win the game
     private int _totalMatchesRequired;
@@ -23,25 +23,33 @@ public class GameManager : MonoBehaviour
     // Lock for card selection
     private bool _canSelectCard = true;
 
+    private bool _persistantSave = true;
+
+    public bool PersistentSave { get { return _persistantSave; } set { _persistantSave = value; } }
     public static GameManager Instance;
 
     public static UnityAction OnFlip;
     public static UnityAction OnMatch;
     public static UnityAction OnMismatch;
     public static UnityAction OnGameOver;
-    public static UnityAction<GameStats> OnGameLoad;
-    public static UnityAction<GameStats> OnStatsUpdate;
+    public static UnityAction<GameState> OnGameLoad;
+    public static UnityAction<GameState> OnStatsUpdate;
 
 
     private void Awake()
     {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
         Instance = this;
     }
     public void StartNewGame(int slots)
     {
         _totalMatchesRequired = slots;
         _currentMatches = 0;
-        _stats = new GameStats();
+        _gameState = new();
         UpdateUI();
     }
 
@@ -50,7 +58,7 @@ public class GameManager : MonoBehaviour
         CardController.OnCardFlipped += HandleCardFlip;
     }
 
-    private void OnDisable()
+    private void OnDestroy()
     {
         CardController.OnCardFlipped -= HandleCardFlip;
     }
@@ -70,16 +78,22 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    public void ClearFlipedCards()
+    {
+        _flippedCards.Clear();
+    }
+
     private IEnumerator CheckForMatchCoroutine()
     {
         yield return new WaitForSeconds(_memorizeDelay); // Wait before checking
 
-        _stats.attempts++;
+        _gameState.Attempts++;
         CardController firstCard = _flippedCards[0];
         CardController secondCard = _flippedCards[1];
 
         if (firstCard.CardID == secondCard.CardID)
         {
+            //Match
             Debug.Log("Got Match " + firstCard.CardID);
             firstCard.MatchCard();
             secondCard.MatchCard();
@@ -87,6 +101,7 @@ public class GameManager : MonoBehaviour
         }
         else
         {
+            //Mismatch
             Debug.Log("No Match " + firstCard.CardID + " ! " + secondCard.CardID);
             MismatchedCards();
         }
@@ -96,6 +111,9 @@ public class GameManager : MonoBehaviour
         // Re-enable card selection
         _canSelectCard = true;
         UpdateUI();
+
+        if(_persistantSave) 
+            SaveGame();
     }
 
     private void MatchedCards()
@@ -103,7 +121,6 @@ public class GameManager : MonoBehaviour
         IncreaseScore();
         _currentMatches++;
         OnMatch?.Invoke();
-        //AudioManager.Instance.PlayMatchSound();
         _flippedCards.Clear();
 
         if (_currentMatches == _totalMatchesRequired)
@@ -114,21 +131,20 @@ public class GameManager : MonoBehaviour
 
     private void MismatchedCards()
     {
-        _stats.combo = 0;
+        _gameState.Combo = 0;
 
         foreach (CardController card in _flippedCards)
         {
             card.UnflipCard();
         }
         OnMismatch?.Invoke();
-        //AudioManager.Instance.PlayMismatchSound();
         _flippedCards.Clear();
     }
 
     private void IncreaseScore()
     {
-        _stats.combo++;
-        _stats.score += 10 * _stats.combo; // Increase score based on combo multiplier
+        _gameState.Combo++;
+        _gameState.Score += 10 * _gameState.Combo;
     }
 
     private void GameOver()
@@ -138,7 +154,7 @@ public class GameManager : MonoBehaviour
 
     private void UpdateUI()
     {
-        OnStatsUpdate?.Invoke(_stats);
+        OnStatsUpdate?.Invoke(_gameState);
     }
 
     public bool CanSelectCard()
@@ -153,58 +169,65 @@ public class GameManager : MonoBehaviour
 
     private IEnumerator SaveRoutine()
     {
-        
-         yield return new WaitForSeconds(.5f);
+        // Delay to end coroutines
+         yield return new WaitForSeconds(1f);
 
-        GameStats gameState = new GameStats
-        {
-            score = _stats.score,
-            attempts = _stats.attempts,
-            combo = _stats.combo,
-            cards = new List<CardData>(),
-            matchesRequired = _totalMatchesRequired,
-            currentMatches = _currentMatches
-        };
+        GameState gameState = GetGameStateSnapshot();
 
         // Gather data for each card
         foreach (var card in FindObjectsOfType<CardController>())
         {
-            CardData cardData = new CardData
+            CardData cardData = new()
             {
-                cardID = card.CardID,
-                isFlipped = card.IsFlipped(),
-                isMatched = card.IsMatched(),
-                position = card.transform.position,
-                scale = card.transform.localScale
+                ID = card.CardID,
+                IsFlipped = card.IsFlipped(),
+                IsMatched = card.IsMatched(),
+                Position = card.transform.position,
+                Scale = card.transform.localScale
             };
-            gameState.cards.Add(cardData);
+            gameState.Cards.Add(cardData);
         }
 
         string json = JsonUtility.ToJson(gameState);
-        File.WriteAllText(Application.persistentDataPath + "/gameState.json", json);
-        Debug.Log("Game saved.");
+        File.WriteAllText(Application.persistentDataPath + "/gameSave.json", json);
+        Debug.Log(json);
+    }
+
+    private GameState GetGameStateSnapshot()
+    {
+        GameState gameState = new()
+        {
+            Score = _gameState.Score,
+            Attempts = _gameState.Attempts,
+            Combo = _gameState.Combo,
+            Cards = new List<CardData>(),
+            MatchesRequired = _totalMatchesRequired,
+            CurrentMatches = _currentMatches
+        };
+        return gameState;
     }
 
     public void LoadGame()
     {
         StopAllCoroutines();
         _flippedCards.Clear();
-        string path = Application.persistentDataPath + "/gameState.json";
+        string path = Application.persistentDataPath + "/gameSave.json";
         if (File.Exists(path))
         {
             string json = File.ReadAllText(path);
-            GameStats gameStat = JsonUtility.FromJson<GameStats>(json);
+            GameState gameStat = JsonUtility.FromJson<GameState>(json);
 
             // Restore game data
-            _stats.score = gameStat.score;
-            _stats.attempts = gameStat.attempts;
-            _stats.combo = gameStat.combo;
-            _totalMatchesRequired = gameStat.matchesRequired;
-            _currentMatches = gameStat.currentMatches;
+            _gameState.Score = gameStat.Score;
+            _gameState.Attempts = gameStat.Attempts;
+            _gameState.Combo = gameStat.Combo;
+            _totalMatchesRequired = gameStat.MatchesRequired;
+            _currentMatches = gameStat.CurrentMatches;
 
             OnGameLoad?.Invoke(gameStat);
             Debug.Log("Game loaded.");
             OnStatsUpdate?.Invoke(gameStat);
+            UpdateUI();
         }
         else
         {

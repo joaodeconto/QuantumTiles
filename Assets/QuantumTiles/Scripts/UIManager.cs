@@ -23,6 +23,13 @@ public class UIManager : MonoBehaviour
     [SerializeField] private Button restartButton;
     [SerializeField] private Button saveButton;
     [SerializeField] private Button loadButton;
+    [SerializeField] private Button closeButton;
+    [SerializeField] private Button continueButton;
+    [SerializeField] private Button quitButton;
+
+    [Header("Toggles")]
+    [SerializeField] private Toggle _audioToggle;
+    [SerializeField] private Toggle _persistentSaveToggle;
 
     [Header("Panels")]
     [SerializeField] private GameObject initialMenuPanel;
@@ -32,17 +39,16 @@ public class UIManager : MonoBehaviour
 
     public static UIManager Instance { get; private set; }
     public Action<Vector2> OnStartButtonClicked;
+    public Action<bool> OnAudioToggle;
 
     private void Awake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-        }
-        else
+        if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
+            return;
         }
+        Instance = this;
     }
 
     private void OnEnable()
@@ -51,7 +57,7 @@ public class UIManager : MonoBehaviour
         GameManager.OnStatsUpdate += UpdateScoreUI;
     }
 
-    private void OnDisable()
+    private void OnDestroy()
     {
         GameManager.OnGameOver -= ShowGameOverPanel;
         GameManager.OnStatsUpdate -= UpdateScoreUI;
@@ -59,22 +65,33 @@ public class UIManager : MonoBehaviour
 
     public void SetupUI(Vector2 maxMinArray)
     {
+        //Slider Values Setup
         rowsSlider.minValue = maxMinArray.x;
         rowsSlider.maxValue = maxMinArray.y;
         columnsSlider.minValue = maxMinArray.x;
         columnsSlider.maxValue = maxMinArray.y;
-
-        rowsSlider.onValueChanged.AddListener((value) => rowsValue.text = rowsSlider.value.ToString());
-        columnsSlider.onValueChanged.AddListener((value) => columnsValue.text = columnsSlider.value.ToString());
-
         rowsValue.text = maxMinArray.x.ToString();
         columnsValue.text = maxMinArray.x.ToString();
 
-        startGameplayButton.onClick.AddListener(() => StartGame());
-        restartButton.onClick.AddListener(() => RestartGame());
+        //Slider Setup
+        rowsSlider.onValueChanged.AddListener((value) => rowsValue.text = rowsSlider.value.ToString());
+        columnsSlider.onValueChanged.AddListener((value) => columnsValue.text = columnsSlider.value.ToString());
 
-        saveButton.onClick.AddListener(() => GameManager.Instance.SaveGame());
-        loadButton.onClick.AddListener(() => GameManager.Instance.LoadGame());
+        // Buttons Setup
+        restartButton.onClick.AddListener(() => RestartGame());
+        closeButton.onClick.AddListener(() => HideOptionsPanel());
+        startGameplayButton.onClick.AddListener(() => StartGame());
+        optionsButton.onClick.AddListener(() => ShowOptionsPanel());
+
+
+        quitButton.onClick.AddListener(delegate { RestartGame(); GameManager.Instance.ClearFlipedCards();});
+        saveButton.onClick.AddListener(delegate { GameManager.Instance.SaveGame(); HideOptionsPanel(); });
+        loadButton.onClick.AddListener(delegate { GameManager.Instance.LoadGame(); HideOptionsPanel(); });
+        continueButton.onClick.AddListener(delegate { GameManager.Instance.LoadGame(); HideInitialMenu(); });
+
+        // Toggle Setup
+        _persistentSaveToggle.onValueChanged.AddListener((value) => { GameManager.Instance.PersistentSave = value;});
+        _audioToggle.onValueChanged.AddListener((value) => { OnAudioToggle?.Invoke(value); });
     }
 
     private void StartGame()
@@ -85,15 +102,16 @@ public class UIManager : MonoBehaviour
 
     private void RestartGame()
     {
-        gameOverPanel.SetActive(false);
-        initialMenuPanel.SetActive(true);
+        HideOptionsPanel();
+        HideGameOverPanel();
+        ShowInitialMenu();
     }
 
-    public void UpdateScoreUI(GameStats stats)
+    public void UpdateScoreUI(GameState stats)
     {
-        comboText.text = "Combo " + stats.combo;
-        attemptsText.text = "Attempts " + stats.attempts;
-        scoreText.text = "Score: " + stats.score;
+        comboText.text = "Combo " + stats.Combo;
+        attemptsText.text = "Attempts " + stats.Attempts;
+        scoreText.text = "Score: " + stats.Score;
     }
 
     public void ShowGameOverPanel()
@@ -104,6 +122,16 @@ public class UIManager : MonoBehaviour
     public void HideGameOverPanel()
     {
         gameOverPanel.SetActive(false);
+    }
+
+    public void ShowOptionsPanel()
+    {
+        optionsPanel.SetActive(true);
+    }
+
+    public void HideOptionsPanel()
+    {
+        optionsPanel.SetActive(false);
     }
 
     public void ShowInitialMenu()

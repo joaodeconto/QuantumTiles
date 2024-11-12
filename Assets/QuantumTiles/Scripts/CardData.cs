@@ -4,9 +4,9 @@ using UnityEngine;
 [Serializable]
 public class CardData
 {
-    public int cardID;
-    public bool isFlipped;
-    public bool isMatched;
-    public Vector3 position;
-    public Vector3 scale;
+    public int ID;
+    public bool IsFlipped;
+    public bool IsMatched;
+    public Vector3 Position;
+    public Vector3 Scale;
 }
